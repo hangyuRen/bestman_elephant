@@ -85,10 +85,10 @@ def get_base_coordinate(u, v, z):
 
 # bestman = Bestman_Real_Elephant("192.168.43.243", 5001)
 
-def move_arm(x_base, y_base, z_base, bestman):
+# def move_arm(x_base, y_base, z_base, bestman):
     # bestman.get_current_cartesian()
     # bestman.get_current_joint_values()
-    bestman.set_arm_coords([x_base, y_base, 200, 175, 0, 120], speed=800)
+    # bestman.set_arm_coords([x_base, y_base, 200, 175, 0, 120], speed=800)
     # bestman.set_arm_coords([x_base, y_base, 170, 175, 0, 120], speed=800)
     # bestman.get_current_cartesian()
     # bestman.get_current_joint_values()

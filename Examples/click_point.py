@@ -51,7 +51,7 @@ def get_mouse_click(event, x, y, flags, param):
             bestman.close_gripper()
             bestman.set_arm_coords([x_base, y_base, 230, 175, 0, 120], speed=800)
             flag = 1
-        # 机械臂夹爪在图像中指定位置释放
+        # 机械臂夹爪在图像中指定位置释放物品并回到标准姿态
         else:
             bestman.set_arm_coords([x_base, y_base, 230, 175, 0, 120], speed=800)
             bestman.set_arm_coords([x_base, y_base, 180, 175, 0, 120], speed=800)
