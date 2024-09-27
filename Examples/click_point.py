@@ -2,14 +2,19 @@
 import pyrealsense2 as rs
 import numpy as np
 import cv2
-from toch_point_caliration import move_arm, get_base_coordinate
-
+from toch_point_caliration import get_base_coordinate_arm1, get_base_coordinate_arm2
+from concurrent.futures import ThreadPoolExecutor
 import sys
 sys.path.append("..")
 from RoboticsToolBox.Bestman_Elephant import Bestman_Real_Elephant
 
 # 实例化Bestman_Real_Elephant对象
-bestman = Bestman_Real_Elephant("192.168.43.243", 5001)
+bestman = Bestman_Real_Elephant("172.20.10.8", 5001)
+bestman2 = Bestman_Real_Elephant("172.20.10.7", 5001)
+
+# 机械臂使能，运行一次即可
+bestman.state_on()
+bestman2.state_on()
 
 # 初始化 RealSense 流程
 pipeline = rs.pipeline()
@@ -26,12 +31,41 @@ pipeline.start(config)
 align_to = rs.stream.color
 align = rs.align(align_to)
 
-# 判断此次鼠标点击是抓取操作还是释放操作 0：抓取 1：释放
-flag = 0
+# 存储点击的坐标
+click_points = []
+
+# 操作类型
+ARM1_GRAB = 0
+ARM1_RELEASE = 1
+ARM2_GRAB = 2
+ARM2_RELEASE = 3
+
+operation = ARM1_GRAB
+
+# 创建线程池
+executor = ThreadPoolExecutor(max_workers=2)
+
+# 移动机械臂到指定位置抓取
+def move_arm(arm:Bestman_Real_Elephant, x_base, y_base, z_base, operation):
+    print(f"{arm}-operation:{operation}-moveing to coordinates:({x_base, y_base, z_base})")
+    if operation == ARM1_GRAB or operation == ARM2_GRAB:
+        arm._set_arm_coords([x_base, y_base, 230, 175, 0, 120], speed=800)
+        arm.open_gripper()
+        arm._set_arm_coords([x_base, y_base, 165, 175, 0, 120], speed=800)
+        arm.close_gripper()
+        arm._set_arm_coords([x_base, y_base, 230, 175, 0, 120], speed=800)
+    else:
+        arm._set_arm_coords([x_base, y_base, 230, 175, 0, 120], speed=800)
+        arm._set_arm_coords([x_base, y_base, 180, 175, 0, 120], speed=800)
+        arm.open_gripper()
+        arm._set_arm_coords([x_base, y_base, 230, 175, 0, 120], speed=800)
+        arm.close_gripper()
+        # arm.set_arm_joint_values([-90, -120.0, 120.0, -90.0, -90.0, -0.0], speed=800)
+        
 
 # 鼠标回调函数
 def get_mouse_click(event, x, y, flags, param):
-    global flag
+    global click_points, operation
     if event == cv2.EVENT_LBUTTONDOWN:
         aligned_depth_frame, color_image = param
         
@@ -41,25 +75,27 @@ def get_mouse_click(event, x, y, flags, param):
         print(f"点击位置 (u, v): ({x}, {y}), 深度值 z: {z} 毫米")
 
         # 图像坐标系转换到机械臂坐标系
-        x_base, y_base, z_base = get_base_coordinate(x, y, z)
-
-        # 机械臂夹爪抓取图像中指定位置的物品
-        if flag == 0:
-            bestman.set_arm_coords([x_base, y_base, 230, 175, 0, 120], speed=800)
-            bestman.open_gripper()
-            bestman.set_arm_coords([x_base, y_base, 165, 175, 0, 120], speed=800)
-            bestman.close_gripper()
-            bestman.set_arm_coords([x_base, y_base, 230, 175, 0, 120], speed=800)
-            flag = 1
-        # 机械臂夹爪在图像中指定位置释放物品并回到标准姿态
+        if operation == ARM1_GRAB or operation == ARM1_RELEASE:
+            x_base, y_base, z_base = get_base_coordinate_arm1(x, y, z)
         else:
-            bestman.set_arm_coords([x_base, y_base, 230, 175, 0, 120], speed=800)
-            bestman.set_arm_coords([x_base, y_base, 180, 175, 0, 120], speed=800)
-            bestman.open_gripper()
-            bestman.close_gripper()
-            bestman.set_arm_joint_values([-90, -120.0, 120.0, -90.0, -90.0, -0.0], speed=800)
-            flag = 0
+            x_base, y_base, z_base = get_base_coordinate_arm2(x, y, z)
 
+        click_points.append((x_base, y_base, z_base))
+
+        if len(click_points) == 1:
+            if operation == ARM1_GRAB:
+                executor.submit(move_arm, bestman, *click_points[0], operation)
+                operation = ARM2_GRAB
+            elif operation == ARM2_GRAB:
+                executor.submit(move_arm, bestman2, *click_points[0], operation)
+                operation = ARM1_RELEASE
+            elif operation == ARM1_RELEASE:
+                executor.submit(move_arm, bestman, *click_points[0], operation)
+                operation = ARM2_RELEASE
+            elif operation == ARM2_RELEASE:
+                executor.submit(move_arm, bestman2, *click_points[0], operation)
+                operation = ARM1_GRAB
+            click_points.clear()
 try:
     while True:
         # 获取一帧数据

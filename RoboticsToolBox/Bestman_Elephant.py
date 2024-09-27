@@ -169,7 +169,10 @@ class Bestman_Real_Elephant:
         # 参数：机器人笛卡尔位姿（列表类型），机械臂运动的速度:[0-6000]
         self.robot.write_coords(coords,speed)
         self.robot.command_wait_done()
-        
+
+    def _set_arm_coords(self, coords, speed=1000):
+        self.robot.write_coords(coords, speed)
+
     def set_jog_angel(self,joint_str, direction, ):
         # 功能： 控制机器人按照指定的角度持续移动
         # 参数：机械臂的关节[J1/J2/J3/J4/J5/J6]，主要控制机器臂移动的方向[-1=负方向 ，0=停止，1=正方向]，机器人运动的速度

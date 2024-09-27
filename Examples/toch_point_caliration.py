@@ -59,13 +59,13 @@ print(mtx)
 # [0.0235948881444421,	0.0871386154283942,	-0.995916734950605,	910.918427688599,],
 # [0,	0,	0,	1,]]) # 有误差 x_base -= 20 y_base += 5
 # # arm 1
-# T_Cam2Robot =np.array(
-# [[-0.993238136531183,	0.115436496565202,	-0.0123458252383180,	201.766762672466],
-# [0.114244695324532,	0.990776725573902,	0.0728672055952539,	-263.414991663470],
-# [0.0206434912325408, 0.0709640424567831,	-0.997265236006913,	913.800488090957],
-# [0,	0,	0,	1]])
+T_Cam2Robot_arm1 =np.array(
+[[-0.993238136531183,	0.115436496565202,	-0.0123458252383180,	201.766762672466],
+[0.114244695324532,	0.990776725573902,	0.0728672055952539,	-263.414991663470],
+[0.0206434912325408, 0.0709640424567831,	-0.997265236006913,	913.800488090957],
+[0,	0,	0,	1]])
 # arm 2
-T_Cam2Robot =np.array(
+T_Cam2Robot_arm2 =np.array(
 [[ 9.94986652e-01, -9.98413045e-02,  5.76861120e-03,  2.54992420e+02],
  [-9.97828359e-02, -9.94962311e-01, -9.66356267e-03, -3.26616246e+02],
  [ 6.70437343e-03,  9.03950748e-03, -9.99936667e-01,  9.12419893e+02],
@@ -74,14 +74,23 @@ T_Cam2Robot =np.array(
 # x_base, y_base, z_base = point_base[0], point_base[1], point_base[2]
 
 # print(f"目标点在机械臂基座坐标系下的位置: ({x_base}, {y_base}, {z_base})")
-
-def get_base_coordinate(u, v, z):
+def get_base_coordinate_arm1(u, v, z):
     X = (u - cx) * z / fx
     Y = (v - cy) * z / fy
     Z = z
     P_camera = np.array([X, Y, Z, 1.0])
-    point_base = np.dot(T_Cam2Robot, P_camera)
+    point_base = np.dot(T_Cam2Robot_arm1, P_camera)
     return point_base[0], point_base[1], point_base[2]
+
+
+def get_base_coordinate_arm2(u, v, z):
+    X = (u - cx) * z / fx
+    Y = (v - cy) * z / fy
+    Z = z
+    P_camera = np.array([X, Y, Z, 1.0])
+    point_base = np.dot(T_Cam2Robot_arm2, P_camera)
+    return point_base[0], point_base[1], point_base[2]
+
 
 # bestman = Bestman_Real_Elephant("192.168.43.243", 5001)
 
