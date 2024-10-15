@@ -1,9 +1,8 @@
-
 import pyrealsense2 as rs
 import numpy as np
 import cv2
 from toch_point_caliration import get_base_coordinate_arm1, get_base_coordinate_arm2
-from concurrent.futures import ThreadPoolExecutor
+from multiprocessing import Process
 import sys
 sys.path.append("..")
 from RoboticsToolBox.Bestman_Elephant import Bestman_Real_Elephant
@@ -12,19 +11,15 @@ from RoboticsToolBox.Bestman_Elephant import Bestman_Real_Elephant
 bestman = Bestman_Real_Elephant("172.20.10.8", 5001)
 bestman2 = Bestman_Real_Elephant("172.20.10.7", 5001)
 
-# 机械臂使能，运行一次即可
-bestman.state_on()
-bestman2.state_on()
+# 机械臂使能，执行一次即可
+# bestman.state_on()
+# bestman2.state_on()
 
 # 初始化 RealSense 流程
 pipeline = rs.pipeline()
 config = rs.config()
-
-# 启用深度流和颜色流
 config.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 30)
 config.enable_stream(rs.stream.color, 1280, 720, rs.format.bgr8, 30)
-
-# 开始流
 pipeline.start(config)
 
 # 创建对齐对象 (将深度图像对齐到颜色图像)
@@ -42,26 +37,22 @@ ARM2_RELEASE = 3
 
 operation = ARM1_GRAB
 
-# 创建线程池
-executor = ThreadPoolExecutor(max_workers=2)
-
 # 移动机械臂到指定位置抓取
 def move_arm(arm:Bestman_Real_Elephant, x_base, y_base, z_base, operation):
     print(f"{arm}-operation:{operation}-moveing to coordinates:({x_base, y_base, z_base})")
     if operation == ARM1_GRAB or operation == ARM2_GRAB:
-        arm._set_arm_coords([x_base, y_base, 230, 175, 0, 120], speed=800)
+        arm.set_arm_coords([x_base, y_base, 230, 175, 0, 120], speed=800)
         arm.open_gripper()
-        arm._set_arm_coords([x_base, y_base, 165, 175, 0, 120], speed=800)
+        arm.set_arm_coords([x_base, y_base, 165, 175, 0, 120], speed=800)
         arm.close_gripper()
-        arm._set_arm_coords([x_base, y_base, 230, 175, 0, 120], speed=800)
+        arm.set_arm_coords([x_base, y_base, 230, 175, 0, 120], speed=800)
     else:
-        arm._set_arm_coords([x_base, y_base, 230, 175, 0, 120], speed=800)
-        arm._set_arm_coords([x_base, y_base, 180, 175, 0, 120], speed=800)
+        arm.set_arm_coords([x_base, y_base, 230, 175, 0, 120], speed=800)
+        arm.set_arm_coords([x_base, y_base, 180, 175, 0, 120], speed=800)
         arm.open_gripper()
-        arm._set_arm_coords([x_base, y_base, 230, 175, 0, 120], speed=800)
+        arm.set_arm_coords([x_base, y_base, 230, 175, 0, 120], speed=800)
         arm.close_gripper()
-        # arm.set_arm_joint_values([-90, -120.0, 120.0, -90.0, -90.0, -0.0], speed=800)
-        
+
 
 # 鼠标回调函数
 def get_mouse_click(event, x, y, flags, param):
@@ -84,46 +75,53 @@ def get_mouse_click(event, x, y, flags, param):
 
         if len(click_points) == 1:
             if operation == ARM1_GRAB:
-                executor.submit(move_arm, bestman, *click_points[0], operation)
+                Process(target=move_arm, args=(bestman, *click_points[0], operation)).start()
                 operation = ARM2_GRAB
+
             elif operation == ARM2_GRAB:
-                executor.submit(move_arm, bestman2, *click_points[0], operation)
+                Process(target=move_arm, args=(bestman2, *click_points[0], operation)).start()
                 operation = ARM1_RELEASE
+
             elif operation == ARM1_RELEASE:
-                executor.submit(move_arm, bestman, *click_points[0], operation)
+                Process(target=move_arm, args=(bestman, *click_points[0], operation)).start()
                 operation = ARM2_RELEASE
+
             elif operation == ARM2_RELEASE:
-                executor.submit(move_arm, bestman2, *click_points[0], operation)
+                Process(target=move_arm, args=(bestman2, *click_points[0], operation)).start()
                 operation = ARM1_GRAB
+
             click_points.clear()
-try:
-    while True:
-        # 获取一帧数据
-        frames = pipeline.wait_for_frames()
+            
 
-        # 对齐深度帧到颜色帧
-        aligned_frames = align.process(frames)
+if __name__=='__main__':
+    try:
+        while True:
+            # 获取一帧数据
+            frames = pipeline.wait_for_frames()
 
-        # 获取对齐后的深度帧和颜色帧
-        aligned_depth_frame = aligned_frames.get_depth_frame()
-        color_frame = aligned_frames.get_color_frame()
+            # 对齐深度帧到颜色帧
+            aligned_frames = align.process(frames)
 
-        if not aligned_depth_frame or not color_frame:
-            continue
+            # 获取对齐后的深度帧和颜色帧
+            aligned_depth_frame = aligned_frames.get_depth_frame()
+            color_frame = aligned_frames.get_color_frame()
 
-        # 将颜色帧转换为 NumPy 数组
-        color_image = np.asanyarray(color_frame.get_data())
+            if not aligned_depth_frame or not color_frame:
+                continue
 
-        # 显示颜色图像
-        cv2.imshow('Aligned RGB Image', color_image)
+            # 将颜色帧转换为 NumPy 数组
+            color_image = np.asanyarray(color_frame.get_data())
 
-        # 设置鼠标回调函数
-        cv2.setMouseCallback('Aligned RGB Image', get_mouse_click, (aligned_depth_frame, color_image))
+            # 显示颜色图像
+            cv2.imshow('Aligned RGB Image', color_image)
 
-        # 等待按键退出
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+            # 设置鼠标回调函数
+            cv2.setMouseCallback('Aligned RGB Image', get_mouse_click, (aligned_depth_frame, color_image))
 
-finally:
-    pipeline.stop()
-    cv2.destroyAllWindows()
+            # 等待按键退出
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+    finally:
+        pipeline.stop()
+        cv2.destroyAllWindows()

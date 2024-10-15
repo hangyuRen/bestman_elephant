@@ -36,17 +36,27 @@ def pca_function(xyz_src, xyz_dst):
     t = dst_mean - R @ src_mean
     return R, t
 
+# arm1
+# XYZInRobot = np.array([
+#     [38.301, -564.843, 154.132],
+#     [96.047, -464.597, 155.652],
+#     [142.049, -389.598, 154.901],
+#     [169.549, -256.601, 159.163],
+#     [261.289, -352.868, 155.401],
+#     [259.078, -450.598, 153.653]
+# ])
+
+# arm2
 XYZInRobot = np.array([
-    [230.949, -360.680, 154.075],
-    [107.448, -360.681, 154.076],
-    [0.446, -359.432, 154.076],
-    [0.447, -260.680, 159.074],
-    [182.458, -260.675, 159.066],
-    [294.951, -260.674, 159.065],
-    [370.691, -260.684, 159.064],
-    [431.448, -224.180, 159.090],
-    [322.449, -224.181, 159.084],
-    [188.448, -224.183, 159.084]
+    [418.656, 36.845, 155.018],
+    [414.661, -57.661, 155.016],
+    [405.908, -157.144, 153.238],
+    [228.908, -270.898, 155.758],
+    [397.415, -270.891, 149.997],
+    [251.927, -378.132, 151.988],
+    [399.662, -367.896, 150.247],
+    [27.415, -390.631, 154.477],
+    [107.167, -519.142, 150.975]
 ])
 
 # Camera intrinsic parameters
@@ -63,8 +73,9 @@ def natural_sort_key(s):
     # 将字符串中的数字部分提取出来，并转换为整数
     return [int(text) if text.isdigit() else text for text in re.split(r'(\d+)', s)]
 # Load images
-img_paths = sorted(glob.glob('data/bd/*c.png'))
+img_paths = sorted(glob.glob(r'C:/Users/86153/Desktop/BestMan_Elephant-bestman/Point cloud coarse registration/data/bd/*c.png'))
 img_paths = sorted(img_paths, key=natural_sort_key)
+
 for i, img_path in enumerate(img_paths):
     img_color = cv2.imread(img_path) / 255.0
     img_depth = cv2.imread(img_path.replace('c.png', 'd.png'), cv2.IMREAD_UNCHANGED).astype(np.float64)
@@ -101,7 +112,7 @@ ax.scatter(xyzInColorCamAll[:, 0], xyzInColorCamAll[:, 1], xyzInColorCamAll[:, 2
 plt.show()
 
 # Coarse registration
-Index = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+Index = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8])
 RCam2Robot, tCam2Robot = pca_function(xyzInColorCamAll[Index].T, XYZInRobot[Index].T)
 XYZInRobotFromCam = (RCam2Robot @ xyzInColorCamAll.T + tCam2Robot).T
 T_Cam2Robot = np.vstack([np.hstack([RCam2Robot, tCam2Robot]), np.array([0, 0, 0, 1])])

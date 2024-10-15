@@ -256,7 +256,49 @@ class Bestman_Real_Elephant:
         print(
                 "[BestMan_Sim][Gripper] \033[34mInfo\033[0m: Gripper close!"
             )
+    def _open_gripper(self, speed=100, open_scale=None):
+        """open gripper
+        Args:
+            state (int): open_scale, 0-100
+            speed (int): speed, 1-100
 
+        """
+        # Gripper settings transparent transmission mode
+        self.robot.set_gripper_mode(0)
+        # time.sleep(0.5)
+        if open_scale == None:
+            # gripper fully open
+            self.robot.set_gripper_state(0,speed)
+            time.sleep(0.5)
+        else:
+            # gripper opening specified position
+            self.robot.set_gripper_value(open_scale, speed)
+        self.robot.command_wait_done()
+        print(
+                "[BestMan_Sim][Gripper] \033[34mInfo\033[0m: Gripper open!"
+            )
+
+    def _close_gripper(self, speed=100, close_scale=None):
+        """open gripper
+        Args:
+            state (int): open_scale, 0-100
+            speed (int): speed, 1-100
+
+        """
+        # Gripper settings transparent transmission mode
+        self.robot.set_gripper_mode(0)
+        # time.sleep(0.5)
+        if close_scale == None:
+            # gripper fully open
+            self.robot.set_gripper_state(1,speed)
+            time.sleep(0.5)
+        else:
+            # gripper opening specified position
+            self.robot.set_gripper_value(close_scale, speed)
+        self.robot.command_wait_done()
+        print(
+                "[BestMan_Sim][Gripper] \033[34mInfo\033[0m: Gripper close!"
+            )
 # if __name__=='__main__':
 #     bestman = Bestman_Real_Elephant(robot_ip='192.168.43.38')
 #     bestman.power_off()
