@@ -1,8 +1,15 @@
+'''
+Author: hyuRen
+Date: 2024-10-09 09:39:00
+LastEditors: hyuRen
+LastEditTime: 2024-10-17 18:02:03
+'''
 import pyrealsense2 as rs
 import numpy as np
 import cv2
 from toch_point_caliration import get_base_coordinate_arm1, get_base_coordinate_arm2
-from multiprocessing import Process
+from multiprocessing import Pool, Process
+from concurrent.futures import ProcessPoolExecutor
 import sys
 sys.path.append("..")
 from RoboticsToolBox.Bestman_Elephant import Bestman_Real_Elephant
@@ -11,7 +18,7 @@ from RoboticsToolBox.Bestman_Elephant import Bestman_Real_Elephant
 bestman = Bestman_Real_Elephant("172.20.10.8", 5001)
 bestman2 = Bestman_Real_Elephant("172.20.10.7", 5001)
 
-# 机械臂使能，执行一次即可
+# # 机械臂使能，执行一次即可
 # bestman.state_on()
 # bestman2.state_on()
 
@@ -30,17 +37,18 @@ align = rs.align(align_to)
 click_points = []
 
 # 操作类型
-ARM1_GRAB = 0
-ARM1_RELEASE = 1
-ARM2_GRAB = 2
-ARM2_RELEASE = 3
+GRAB = 0
+RELEASE = 1
+turn = 0
+operation = GRAB
 
-operation = ARM1_GRAB
+# 创建进程池， 并发控制两个机械臂
+executor = ProcessPoolExecutor(max_workers=2)
 
 # 移动机械臂到指定位置抓取
 def move_arm(arm:Bestman_Real_Elephant, x_base, y_base, z_base, operation):
     print(f"{arm}-operation:{operation}-moveing to coordinates:({x_base, y_base, z_base})")
-    if operation == ARM1_GRAB or operation == ARM2_GRAB:
+    if operation == GRAB:
         arm.set_arm_coords([x_base, y_base, 230, 175, 0, 120], speed=800)
         arm.open_gripper()
         arm.set_arm_coords([x_base, y_base, 165, 175, 0, 120], speed=800)
@@ -56,7 +64,7 @@ def move_arm(arm:Bestman_Real_Elephant, x_base, y_base, z_base, operation):
 
 # 鼠标回调函数
 def get_mouse_click(event, x, y, flags, param):
-    global click_points, operation
+    global click_points, operation, turn
     if event == cv2.EVENT_LBUTTONDOWN:
         aligned_depth_frame, color_image = param
         
@@ -66,34 +74,27 @@ def get_mouse_click(event, x, y, flags, param):
         print(f"点击位置 (u, v): ({x}, {y}), 深度值 z: {z} 毫米")
 
         # 图像坐标系转换到机械臂坐标系
-        if operation == ARM1_GRAB or operation == ARM1_RELEASE:
+        if turn == 0:
             x_base, y_base, z_base = get_base_coordinate_arm1(x, y, z)
+            turn = 1
         else:
             x_base, y_base, z_base = get_base_coordinate_arm2(x, y, z)
+            turn = 0
 
         click_points.append((x_base, y_base, z_base))
 
-        if len(click_points) == 1:
-            if operation == ARM1_GRAB:
-                Process(target=move_arm, args=(bestman, *click_points[0], operation)).start()
-                operation = ARM2_GRAB
-
-            elif operation == ARM2_GRAB:
-                Process(target=move_arm, args=(bestman2, *click_points[0], operation)).start()
-                operation = ARM1_RELEASE
-
-            elif operation == ARM1_RELEASE:
-                Process(target=move_arm, args=(bestman, *click_points[0], operation)).start()
-                operation = ARM2_RELEASE
-
-            elif operation == ARM2_RELEASE:
-                Process(target=move_arm, args=(bestman2, *click_points[0], operation)).start()
-                operation = ARM1_GRAB
+        if len(click_points) == 2:
+            executor.submit(move_arm, bestman, *click_points[0], operation)
+            executor.submit(move_arm, bestman2, *click_points[1], operation)
+            if operation == GRAB:
+                operation = RELEASE
+            else:
+                operation = GRAB
 
             click_points.clear()
             
 
-if __name__=='__main__':
+if __name__ == '__main__':
     try:
         while True:
             # 获取一帧数据
