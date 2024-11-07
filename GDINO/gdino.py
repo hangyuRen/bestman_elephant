@@ -1,8 +1,17 @@
+'''
+Author: hyuRen
+Date: 2024-11-06 21:07:30
+LastEditors: hyuRen
+LastEditTime: 2024-11-06 21:33:15
+Description: 
+'''
+import sys
+sys.path.append('/home/rhy/pythonCodes/bestman_elephant_v2')
 import torch
-from PIL import Image, ImageDraw
+from PIL import Image
 from transformers import AutoModelForZeroShotObjectDetection, AutoProcessor
 
-from utils import get_device_type, get_box_center
+from GDINO.utils import get_device_type
 
 device_type = get_device_type()
 DEVICE = torch.device(device_type)
@@ -15,7 +24,7 @@ if torch.cuda.is_available():
 
 
 class GDINO:
-    def __init__(self, model_dir='./gdino/gdino_model'):
+    def __init__(self, model_dir='./GDINO/gdino_model'):
         self.build_model(model_dir)
 
     def build_model(self, model_dir):
@@ -46,34 +55,3 @@ class GDINO:
             target_sizes=[k.size[::-1] for k in pil_images],
         )
         return results
-
-
-if __name__ == "__main__":
-    gdino = GDINO(model_dir='./gdino/gdino_model')
-    # gdino.build_model()
-    # out = gdino.predict(
-    #     [Image.open("./assets/car.jpeg"), Image.open("./assets/car.jpeg")],
-    #     ["wheel", "wheel"],
-    #     0.3,
-    #     0.25,
-    # )
-    image = Image.open("./Asset/images/cmp1.jpg").convert('RGB')
-    out = gdino.predict(
-        [image],
-        ["red."],
-        0.3,
-        0.25,
-    )
-    scores = out[0]['scores']
-    highest_score_index = torch.argmax(scores).item() 
-    draw = ImageDraw.Draw(image)
-    # for result in out:
-    #     for box in result['boxes']:
-    #         draw.rectangle(box.tolist(), outline='blue', width=3)
-    # image.show()
-    box_list = out[0]['boxes'][highest_score_index].tolist()
-    center_x, center_y = get_box_center(box_list)
-    draw.rectangle(box_list, outline='blue', width=3)
-    draw.point((center_x, center_y), fill='red')
-    image.show()
-    print(out)

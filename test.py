@@ -2,18 +2,13 @@
 Author: hyuRen
 Date: 2024-10-09 09:39:00
 LastEditors: hyuRen
-LastEditTime: 2024-10-17 18:02:03
+LastEditTime: 2024-11-06 21:36:24
 '''
-import pyrealsense2 as rs
-import numpy as np
 import cv2
-from Examples.toch_point_caliration import get_base_coordinate_arm1, get_base_coordinate_arm2
-from multiprocessing import Pool, Process
-from concurrent.futures import ProcessPoolExecutor
 import sys
 sys.path.append("..")
 from RoboticsToolBox.Bestman_Elephant import Bestman_Real_Elephant
-from gdino.gdino import GDINO, get_box_center
+from GDINO.gdino import GDINO, get_box_center
 from Visualization.my_camera import Camera
 from PIL import Image
 import torch
@@ -38,7 +33,7 @@ def move_arm(x_base, y_base, z_base):
     
 
 if __name__ == '__main__':
-    model = GDINO(model_dir='./gdino/gdino_model')
+    model = GDINO(model_dir='./GDINO/gdino_model')
     camera = Camera()
     try:
         while True:
