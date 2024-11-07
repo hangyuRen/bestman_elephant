@@ -2,7 +2,7 @@
 Author: hyuRen
 Date: 2024-11-06 21:16:59
 LastEditors: hyuRen
-LastEditTime: 2024-11-06 21:37:11
+LastEditTime: 2024-11-06 22:12:27
 Description: 
 '''
 from GDINO.gdino import GDINO, DEVICE
@@ -14,12 +14,12 @@ from FastSAM.fastsam import FastSAM, FastSAMPrompt
 
 gdino_model = GDINO(model_dir='./GDINO/gdino_model')
 
-IMAGE_PATH = 'FastSAM/images/cat.jpg'
+IMAGE_PATH = 'FastSAM/images/real_scene_images/4.jpg'
 image = Image.open(IMAGE_PATH).convert('RGB')
 
 out = gdino_model.predict(
     [image],
-    ["cat."],
+    ["blue on the top."],
     0.3,
     0.25,
 )
@@ -46,4 +46,4 @@ prompt_process = FastSAMPrompt(image, everything_results, device=DEVICE)
 
 ann = prompt_process.box_prompt(bboxes=[box_list])
 
-prompt_process.plot(annotations=ann,output_path='test.jpg',)
+prompt_process.plot(annotations=ann,output_path='FastSAM/images/real_scene_images/outputs/4_blue_mask.jpg',)

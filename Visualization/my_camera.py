@@ -1,3 +1,10 @@
+'''
+Author: hyuRen
+Date: 2024-11-06 21:07:30
+LastEditors: hyuRen
+LastEditTime: 2024-11-06 21:48:56
+Description: 
+'''
 import numpy as np
 import pyrealsense2 as rs
 import cv2
@@ -9,6 +16,8 @@ class Camera():
         self.fps = fps
         self.scale = None
         self.pipeline = None
+        self.config = None
+        self.align = None
         self.camera_intrinsic = np.loadtxt('./Visualization/cam_pose/camera_intrinsic.txt', delimiter=' ')
         self.T_Cam2Robot_arm1 = np.loadtxt('./Visualization/cam_pose/T_Cam2Robot_arm1.txt', delimiter=' ')
         self.T_Cam2Robot_arm2 = np.loadtxt('./Visualization/cam_pose/T_Cam2Robot_arm2.txt', delimiter=' ')
@@ -24,12 +33,12 @@ class Camera():
     def connect(self):
         # Configure depth and color streams
         self.pipeline = rs.pipeline()
-        config = rs.config()
-        config.enable_stream(rs.stream.depth, self.im_width, self.im_height, rs.format.z16, self.fps)
-        config.enable_stream(rs.stream.color, self.im_width, self.im_height, rs.format.bgr8, self.fps)
+        self.config = rs.config()
+        self.config.enable_stream(rs.stream.depth, self.im_width, self.im_height, rs.format.z16, self.fps)
+        self.config.enable_stream(rs.stream.color, self.im_width, self.im_height, rs.format.bgr8, self.fps)
 
         # Start streaming
-        cfg = self.pipeline.start(config)
+        cfg = self.pipeline.start(self.config)
 
         # # Determine intrinsics
         # rgb_profile = cfg.get_stream(rs.stream.color)
@@ -45,8 +54,8 @@ class Camera():
         frames = self.pipeline.wait_for_frames()
 
         # align
-        align = rs.align(align_to=rs.stream.color)
-        aligned_frames = align.process(frames)
+        self.align = rs.align(align_to=rs.stream.color)
+        aligned_frames = self.align.process(frames)
         aligned_depth_frame = aligned_frames.get_depth_frame()
         color_frame = aligned_frames.get_color_frame()
         # no align
@@ -54,11 +63,11 @@ class Camera():
         # color_frame = frames.get_color_frame()
 
         # Convert images to numpy arrays
-        depth_image = np.asanyarray(aligned_depth_frame.get_data(),dtype=np.float32)
-        # depth_image *= self.scale
-        depth_image = np.expand_dims(depth_image, axis=2)
+        # depth_image = np.asanyarray(aligned_depth_frame.get_data(),dtype=np.float32)
+        # # depth_image *= self.scale
+        # depth_image = np.expand_dims(depth_image, axis=2)
         color_image = np.asanyarray(color_frame.get_data())
-        return color_image, depth_image
+        return color_image, aligned_depth_frame
 
 
     def plot_image(self):
@@ -95,3 +104,4 @@ class Camera():
     
 if __name__=='__main__':
     camera = Camera()
+    camera.plot_image()
